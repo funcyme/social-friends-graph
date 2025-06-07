@@ -5,8 +5,9 @@ from lib import shared
 import services.facebook.driver
 import services.instagram.driver
 import services.bluesky.driver
+import services.mastodon.driver
 
-AVAILABLE_SERVICES = ['facebook', 'instagram', 'bluesky']
+AVAILABLE_SERVICES = ['facebook', 'instagram', 'bluesky', 'mastodon']
 
 def set_service(service, mode=None):
     global service_values
@@ -20,6 +21,9 @@ def set_service(service, mode=None):
                 service_driver = services.instagram.driver
             case 'bluesky':
                 service_driver = services.bluesky.driver
+            case 'mastodon':
+                service_driver = services.mastodon.driver
+    
         service_driver.values = service_values
         try:
             service_driver.calibrated_driver_values = json.load(open(f"{shared.user_data_folder}/calibrated_driver_values.json", "r", encoding="utf-8"))[service]

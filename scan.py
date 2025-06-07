@@ -45,15 +45,14 @@ def exec_queue(queue, tab):
     i = 0
     for user in queue:
         print(f'Current user: {user} ({str(i+1)}/{str(len(queue))}, thread {display_thread})')
-        if not args.debug:
-            try:
-                result_get = services.handler.get_friends(user, args.source, tab=tab)
-            except:
-                print(f'Error while scanning users friends: {user}')
-                users_errors += [user]
-                result_get = {"users_errors": [user]}
-        else:
+        try:
             result_get = services.handler.get_friends(user, args.source, tab=tab)
+        except:
+            print(f'Error while scanning users friends: {user}')
+            if args.debug:
+                raise
+            users_errors += [user]
+            result_get = {"users_errors": [user]}
         users_scanned += [user]
         result = shared.deep_update(result, result_get)
         i += 1
@@ -81,22 +80,20 @@ def start_crawling(username, depth):
     # save data about user
     if username not in users_db["display_names"] or args.force==True:
         print("Getting user display name:", username)
-        if not args.debug:
-            try:
-                users_db["display_names"][username] = services.handler.get_display_name(username)
-            except:
-                print(f"Error while getting user display name: {username}")
-        else:
+        try:
             users_db["display_names"][username] = services.handler.get_display_name(username)
+        except:
+            print(f"Error while getting user display name: {username}")
+            if args.debug:
+                raise
     if not args.nopfp and (username+'.png' not in os.listdir(services.handler.service_driver.save_pfp_location) or args.force==True):
         print("Getting user profile picture:", username)
-        if not args.debug:
-            try:
-                services.handler.save_pfp(username)
-            except:
-                print(f"Error while getting user profile picture: {username}")
-        else:
+        try:
             services.handler.save_pfp(username)
+        except:
+            print(f"Error while getting user profile picture: {username}")
+            if args.debug:
+                raise
 
     # scanning system
     queue = []

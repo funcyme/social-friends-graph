@@ -1,0 +1,9 @@
+{
+    "urls": {
+        "BASE_URL": "https://mastodon.social/api/v1/"
+    },
+    "available_sources": [
+        "following",
+        "followers"
+    ]
+}

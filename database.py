@@ -11,6 +11,7 @@ parser.add_argument('--cleanup', '-c', action='store_true', help='remove markdow
 parser.add_argument('--usernames', '-u', action='store_true', help='use usernames instead of display names for generating graph')
 parser.add_argument('--query', '-q', help='execute query on database (keys separated with spaces)')
 parser.add_argument('--merge', '-m', help='source database to merge')
+parser.add_argument('--fill', '-f', action='store_true', help='display users to scan, to make database complete')
 args = parser.parse_args()
 
 def get_graph_name(user):
@@ -75,3 +76,16 @@ if args.merge:
         if file.endswith('.png'):
             shutil.copy(db_folder_merge+shared.db_images_folder+file, db_folder+shared.db_images_folder)
     print(f'Merged database {args.merge} to {args.database}.')
+
+if args.fill:
+    users_missing_display_name = []
+    users_missing_pfp = []
+    for user in users_db["users"]:
+        if user not in users_db["display_names"].keys():
+            users_missing_display_name += [user]
+        if shared.format_file_name(user)+'.png' not in os.listdir(db_folder+shared.db_images_folder):
+            users_missing_pfp += [user]
+    print("Users with errors:", " ".join(users_db["users_errors"]))
+    print("Users missing display name:", " ".join(users_missing_display_name))
+    print("Users missing profile picture:", " ".join(users_missing_pfp))
+    print("Complete list:", " ".join(users_db["users_errors"]+users_missing_display_name+users_missing_pfp))
