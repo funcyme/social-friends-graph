@@ -18,14 +18,10 @@ def get_friends(username, source):
     driver.driver.find_element(By.XPATH, calibrated_driver_values["show_list_"+source]).click()
     time.sleep(args_pause)
     scroll_down_list(args_max_scrolls)
-    friends_list_element = driver.driver.find_elements(By.XPATH, calibrated_driver_values["friend_handle"])[0].find_element(By.XPATH, '../../../../../../../../../../../../../../../../..')
-    if friends_list_element.find_elements(By.XPATH, "./div")[-1].get_attribute('class') != '':
-        driver.driver.execute_script("arguments[0].innerHTML = '';", friends_list_element.find_elements(By.XPATH, "./div")[-2])
-    time.sleep(args_pause)
 
-    friends_list = driver.driver.find_elements(By.XPATH, calibrated_driver_values["friend_handle"])
-    friends_display_name_list = driver.driver.find_elements(By.XPATH, calibrated_driver_values["friend_display_name"])
-    friends_pfp_list = driver.driver.find_elements(By.XPATH, calibrated_driver_values["friend_pfp"]+"/../..")
+    friends_list = driver.driver.find_elements(By.XPATH, get_updated_xpath(calibrated_driver_values["friend_handle"]))
+    friends_display_name_list = driver.driver.find_elements(By.XPATH, get_updated_xpath(calibrated_driver_values["friend_display_name"]))
+    friends_pfp_list = driver.driver.find_elements(By.XPATH, get_updated_xpath(calibrated_driver_values["friend_pfp"]))
 
     friends = copy.deepcopy(shared.users_db_structure)
     friends["users"] = {username: {source: []}}
@@ -36,7 +32,7 @@ def get_friends(username, source):
 
         friends["users"][username][source] += [friend_username]
         friends["display_names"][friend_username] = friend_display_name
-        if args_save_pfp and len(friends_pfp_list) > i:
+        if args_save_pfp:
             friends_pfp_list[i].screenshot(shared.get_user_pfp_path(database, friend_username))
         i+=1
     return friends
@@ -44,7 +40,7 @@ def get_friends(username, source):
 def scroll_down_list(max_scrolls):
     if max_scrolls == 0:
         return
-    friends_list = driver.driver.find_elements(By.XPATH, calibrated_driver_values["friend_handle"])[0].find_element(By.XPATH, '../../../../../../../../../../../../../../../../..')
+    friends_list = driver.driver.find_elements(By.XPATH, get_updated_xpath(calibrated_driver_values["friend_handle"]))[0].find_element(By.XPATH, '../../../../../..')
     scroll_down_script = f'var container = document.getElementsByClassName("{friends_list.get_attribute("class")}")[0]; container.scrollTop = container.scrollHeight;'
     scrolls = 0
     src1 = 1
@@ -57,3 +53,9 @@ def scroll_down_list(max_scrolls):
         scrolls += 1
         if max_scrolls and scrolls >= max_scrolls:
             break
+
+def get_updated_xpath(xpath):
+    updated_xpath = xpath.split("/")
+    updated_xpath[3] = "div[*]"
+    updated_xpath = "/".join(updated_xpath)
+    return updated_xpath

@@ -5,7 +5,6 @@ Create relationship graph between friends using data from social media services.
 - No **API keys** are needed.
 - Data can be opened in **Obsidian** to show [graph view](https://help.obsidian.md/Plugins/Graph+view) of connections between friends.
 - **Linux** and **Windows** OS are supported.
-- Multiple scanning **threads** support.
 
 ### Supported services
 Check [services](services/README.md) for list of supported services.

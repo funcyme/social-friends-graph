@@ -4,10 +4,7 @@ from selenium import webdriver
 
 from lib import shared
 
-drivers = []
-
-def open_url(url, tab=0):
-    driver = drivers[tab]
+def open_url(url):
     try:
         if args_manual == False:
             driver.get(url)
@@ -24,27 +21,26 @@ def open_url(url, tab=0):
         pass
     return driver.page_source
 
-def open_tabs(threads, url, session=None):
-    global drivers
-    for thread in range(threads):
-        print(f'Opening tab {str(thread+1)}/{str(threads)}...')
-        drivers += [webdriver.Firefox()]
-        open_url(url, tab=thread)
-        if session != None:
-            Cookies.load(session, tab=thread)
+def open_browser(url, session=None, profile=None):
+    global driver
+    options = webdriver.firefox.options.Options()
+    if profile != None:
+        options.profile = profile
+    print('Opening browser...')
+    driver = webdriver.Firefox(options=options)
+    open_url(url)
+    if session != None:
+        Cookies.load(session)
 
-def classes_to_css_selector(classes):
-    return '.'+classes.replace(' ', '.')
-
-def close_tabs():
-    for driver in drivers:
-        driver.quit()
+def close_browser():
+    print('Closing browser...')
+    driver.quit()
 
 class Cookies:
-    def dump(session, tab=0):
-        pickle.dump(drivers[tab].get_cookies(), open(shared.sessions_folder+session+".pkl", "wb"))
+    def dump(session):
+        pickle.dump(driver.get_cookies(), open(shared.sessions_folder+session+".pkl", "wb"))
 
-    def load(session, tab=0):
+    def load(session):
         cookies = pickle.load(open(shared.sessions_folder+session+".pkl", "rb"))
         for cookie in cookies:
-            drivers[tab].add_cookie(cookie)
+            driver.add_cookie(cookie)

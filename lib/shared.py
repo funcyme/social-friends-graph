@@ -28,6 +28,9 @@ def deep_update(d, u):
 def format_file_name(filename):
     return re.sub(r'[<>:"/\\|?*]', '', filename)
 
+def get_user_pfp_path(database, username):
+    return databases_folder+database+'/'+db_images_folder+format_file_name(username)+'.png'
+
 class Database:
     def format_graph(users_db):
         merge_db = copy.deepcopy(users_db_structure)

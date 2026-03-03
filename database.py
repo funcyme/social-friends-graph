@@ -20,7 +20,7 @@ def get_graph_name(user):
     else:
         return user
 
-def db_cleanup():
+def db_cleanup(db_folder):
     files = os.listdir(db_folder)
     for file in files:
         if file.endswith('.md'):
@@ -38,7 +38,7 @@ if args.query:
     print(sub)
 
 if args.cleanup:
-    db_cleanup()
+    db_cleanup(db_folder)
     print(f'Cleaned up database {args.database}.')
 
 if args.generate:
@@ -49,8 +49,8 @@ if args.generate:
         f_content = f'Username: **{user}**\n'
         if not args.usernames:
             f_content += f'Display name: **{user_name}**\n'
-        if shared.format_file_name(user)+'.png' in os.listdir(db_folder+shared.db_images_folder):
-            f_content += f'Profile picture:\n![[{shared.db_images_folder+shared.format_file_name(user)}.png]]\n'
+        if os.path.exists(shared.get_user_pfp_path(args.database, user)):
+            f_content += f'Profile picture:\n![[{shared.get_user_pfp_path(args.database, user)}]]\n'
         f_content += '\n'
         for x in users_db_graph["users"][user]:
             if x in ["friends", "following"]:
@@ -74,7 +74,8 @@ if args.merge:
     shared.Database.dump(args.database, users_db)
     for file in os.listdir(db_folder_merge+shared.db_images_folder):
         if file.endswith('.png'):
-            shutil.copy(db_folder_merge+shared.db_images_folder+file, db_folder+shared.db_images_folder)
+            file_username = file[:-4]
+            shutil.copy(shared.get_user_pfp_path(args.merge, file_username), shared.get_user_pfp_path(args.database, file_username))
     print(f'Merged database {args.merge} to {args.database}.')
 
 if args.fill:
@@ -83,7 +84,7 @@ if args.fill:
     for user in users_db["users"]:
         if user not in users_db["display_names"].keys():
             users_missing_display_name += [user]
-        if shared.format_file_name(user)+'.png' not in os.listdir(db_folder+shared.db_images_folder):
+        if not os.path.exists(shared.get_user_pfp_path(args.database, user)):
             users_missing_pfp += [user]
     print("Users with errors:", " ".join(users_db["users_errors"]))
     print("Users missing display name:", " ".join(users_missing_display_name))

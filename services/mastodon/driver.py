@@ -5,7 +5,7 @@ import requests
 
 from lib import shared
 
-def get_display_name(username, tab = None):
+def get_display_name(username):
     response = parse_api_response(values["urls"]["BASE_URL"] + f'accounts/lookup?acct={username}')
     return response["display_name"]
 
@@ -13,11 +13,11 @@ def get_id(username):
     response = parse_api_response(values["urls"]["BASE_URL"] + f'accounts/lookup?acct={username}')
     return response["id"]
 
-def save_pfp(username, tab = None):
+def save_pfp(username):
     response = parse_api_response(values["urls"]["BASE_URL"] + f'accounts/lookup?acct={username}')
-    open(save_pfp_location + username+'.png', 'wb').write(requests.get(response["avatar"]).content)
+    open(shared.get_user_pfp_path(database, username), 'wb').write(requests.get(response["avatar"]).content)
 
-def get_friends(username, source, tab = None):
+def get_friends(username, source):
     id = get_id(username)
     
     match source:
@@ -32,13 +32,13 @@ def get_friends(username, source, tab = None):
     for friend in response:
         friend_username = friend["acct"]
         friend_display_name = friend["display_name"]
-        if not args_nopfp:
-            open(save_pfp_location + friend_username + '.png', 'wb').write(requests.get(friend["avatar"]).content)
 
-        if friend_username not in friends["users"][username][source]:
-            friends["users"][username][source] += [friend_username]
-            if friend_display_name != "":
-                friends["display_names"][friend_username] = friend_display_name
+        friends["users"][username][source] += [friend_username]
+        if friend_display_name != "":
+            friends["display_names"][friend_username] = friend_display_name
+        
+        if args_save_pfp:
+            open(shared.get_user_pfp_path(database, friend_username), 'wb').write(requests.get(friend["avatar"]).content)
     return friends
 
 def parse_api_response(url):

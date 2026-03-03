@@ -6,17 +6,17 @@
         },
         "profile_pic": {
             "description": "User profile picture",
-            "location": "example.user",
-            "xpath_overwrite": "../../../.."
+            "location": "example.user"
         },
         "friend_pfp": {
             "description": "Friend profile picture",
-            "location": "example.user?sk=friends_all"
+            "location": "example.user?sk=friends_all",
+            "multiple": true
         },
         "friend_entry": {
             "description": "Friend full name",
             "location": "example.user?sk=friends_all",
-            "xpath_overwrite": ".."
+            "multiple": true
         }
     },
     "urls": {

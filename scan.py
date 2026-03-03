@@ -1,7 +1,6 @@
 import argparse
 import os
 import copy
-from multiprocessing.pool import ThreadPool
 
 from lib import shared, driver
 
@@ -11,9 +10,9 @@ parser = argparse.ArgumentParser(description='Connection scanning tool.')
 parser.add_argument('users', help='usernames to scan (separated with spaces)')
 parser.add_argument('service', choices=services.handler.AVAILABLE_SERVICES, help='select one of available services')
 parser.add_argument('database', help='database name')
-parser.add_argument('source', choices=['all', 'following', 'followers', 'friends'], help='select one of available sources')
+parser.add_argument('source', choices=services.handler.AVAILABLE_SOURCES, help='select one of available sources')
 parser.add_argument('--session', '-s', help='session name')
-parser.add_argument('--depth', '-D', type=int, default=1, help='crawling depth (friends of friends)')
+parser.add_argument('--depth', '-d', type=int, default=1, help='crawling depth (friends of friends)')
 parser.add_argument('--pause', '-p', type=int, default=3, help='seconds to pause after loading a page')
 parser.add_argument('--max-scrolls', '-m', type=int, help='maximum number of scrolls down per page')
 parser.add_argument('--manual', '-M', action='store_true', help='in manual mode you have to navigate between pages by yourself')
@@ -21,7 +20,6 @@ parser.add_argument('--force', '-f', action='store_true', help='rescan already s
 parser.add_argument('--nopfp', action='store_true', help='do not save profile pictures in database')
 parser.add_argument('--blacklist', '-b', help='blacklist usernames to avoid scanning')
 parser.add_argument('--limit', '-l', type=int, help='limit number of users to scan')
-parser.add_argument('--threads', '-t', type=int, default=1, help='number of threads for scanning')
 parser.add_argument('--autosave', '-a', type=int, help='save results every given amount of users scanned')
 parser.add_argument('--debug', action='store_true', help='disable ignoring driver errors')
 args = parser.parse_args()
@@ -35,18 +33,17 @@ def split_list(l, x):
     else:
         return [l]
 
-# execute queue for thread
-def exec_queue(queue, tab):
-    display_thread = str(tab+1)
-    print(f'In queue (thread {display_thread}): {queue}\n')
+# execute queue
+def exec_queue(queue):
+    print(f'In queue: {queue}\n')
     result = copy.deepcopy(shared.users_db_structure)
     global users_scanned
     global users_errors
     i = 0
     for user in queue:
-        print(f'Current user: {user} ({str(i+1)}/{str(len(queue))}, thread {display_thread})')
+        print(f'Current user: {user} ({str(i+1)}/{str(len(queue))})')
         try:
-            result_get = services.handler.get_friends(user, args.source, tab=tab)
+            result_get = services.handler.get_friends(user, args.source)
         except:
             print(f'Error while scanning users friends: {user}')
             if args.debug:
@@ -59,24 +56,6 @@ def exec_queue(queue, tab):
     return result
 
 def start_crawling(username, depth):
-    # import database
-    try:
-        users_db = shared.Database.load(args.database)
-    except:
-        users_db = copy.deepcopy(shared.users_db_structure)
-
-    # import blacklist
-    blacklist = []
-    if args.blacklist != None:
-        blacklist += args.blacklist.split(" ")
-        print(f'Blacklisted users: {blacklist}')
-
-    # import already scanned users
-    already_scanned = []
-    if not args.force:
-        already_scanned += list(users_db["users"].keys()) + users_db["users_errors"]
-        print(f'Already scanned users: {already_scanned}')
-
     # save data about user
     if username not in users_db["display_names"] or args.force==True:
         print("Getting user display name:", username)
@@ -86,7 +65,7 @@ def start_crawling(username, depth):
             print(f"Error while getting user display name: {username}")
             if args.debug:
                 raise
-    if not args.nopfp and (username+'.png' not in os.listdir(services.handler.service_driver.save_pfp_location) or args.force==True):
+    if not args.nopfp and (not os.path.exists(shared.get_user_pfp_path(args.database, username)) or args.force==True):
         print("Getting user profile picture:", username)
         try:
             services.handler.save_pfp(username)
@@ -107,26 +86,7 @@ def start_crawling(username, depth):
     for depth_index in range(depth):
         print(f'\nCurrent depth: {depth_index+1}')
         for queue_chunk in split_list(queue, args.autosave):
-            # divide queue
-            queue_divided = {}
-            for thread in range(args.threads):
-                queue_divided[thread] = []
-                for i in range(thread, len(queue_chunk), args.threads):
-                    queue_divided[thread] += [queue_chunk[i]]
-
-            # start threads
-            thread_pools = {}
-            thread_results = {}
-            for thread in queue_divided:
-                thread_pools[thread] = ThreadPool(processes=1)
-                thread_results[thread] = thread_pools[thread].apply_async(exec_queue, (queue_divided[thread], thread))
-
-            # get results from threads
-            queue_result = copy.deepcopy(next_result)
-            next_result = copy.deepcopy(shared.users_db_structure)
-            for thread in thread_results:
-                thread_result = thread_results[thread].get()
-                queue_result = shared.deep_update(queue_result, thread_result)
+            queue_result = exec_queue(queue_chunk)
 
             # update users database
             for user in queue_result["users"]:
@@ -151,12 +111,8 @@ def start_crawling(username, depth):
         queue = next_round
         next_round = []
 
-    if not args.autosave:
-        shared.Database.dump(args.database, users_db)
-        print("Database saved.")
-
-print(f'Using {args.database} as database.')
 db_folder = shared.databases_folder+args.database+'/'
+print(f'Using {args.database} as database.')
 
 # create required folders if not exists
 required_folders = [db_folder, db_folder+shared.db_images_folder]
@@ -185,17 +141,33 @@ if service_file_overwrite:
 values = services.handler.set_service(args.service, mode="scan")
 if args.session:
     print(f'Using {args.session} as session.')
-    print("Launching Firefox...")
-    driver.open_tabs(args.threads, values["urls"]["DEFAULT_URL"], session=args.session)
-    print("All tabs have been opened.")
+    driver.open_browser(values["urls"]["DEFAULT_URL"], session=args.session)
 
 # import arguments to driver
 driver.args_pause = args.pause
 driver.args_manual = args.manual
-services.handler.service_driver.save_pfp_location = db_folder+shared.db_images_folder
+services.handler.service_driver.database = args.database
 services.handler.service_driver.args_max_scrolls = args.max_scrolls
-services.handler.service_driver.args_nopfp = args.nopfp
+services.handler.service_driver.args_save_pfp = not args.nopfp
 services.handler.service_driver.args_pause = args.pause
+
+# import database
+try:
+    users_db = shared.Database.load(args.database)
+except:
+    users_db = copy.deepcopy(shared.users_db_structure)
+
+# import blacklist
+blacklist = []
+if args.blacklist != None:
+    blacklist += args.blacklist.split(" ")
+    print(f'Blacklisted users: {blacklist}')
+
+# import already scanned users
+already_scanned = []
+if not args.force:
+    already_scanned += list(users_db["users"].keys()) + users_db["users_errors"]
+    print(f'Already scanned users: {already_scanned}')
 
 # start crawling
 users_scanned = []
@@ -205,14 +177,17 @@ for user in args.users.split(" "):
     print(f'User: {user} (depth: {args.depth})')
     start_crawling(user, args.depth)
 
+if not args.autosave:
+    shared.Database.dump(args.database, users_db)
+    print("Database saved.")
+
 # print summary
 print(f'\nUsers scanned: {users_scanned} | {len(users_scanned)} users')
 if users_errors != []:
     print(f'Errors: {users_errors} | {len(users_errors)} users')
 
-# close browser threads
+# close browser
 if args.session:
-    print("Closing tabs...")
-    driver.close_tabs()
+    driver.close_browser()
 
 print("\nFinished.")

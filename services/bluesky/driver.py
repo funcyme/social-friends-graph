@@ -4,15 +4,15 @@ import json
 
 from lib import shared
 
-def get_display_name(username, tab=0):
+def get_display_name(username):
     response = parse_api_response(values["urls"]["BASE_URL"]+'xrpc/app.bsky.actor.getProfile?actor='+username)
     return response["displayName"]
 
-def save_pfp(username, tab=0):
+def save_pfp(username):
     response = parse_api_response(values["urls"]["BASE_URL"]+'xrpc/app.bsky.actor.getProfile?actor='+username)
-    open(save_pfp_location+username+'.png', 'wb').write(requests.get(response["avatar"]).content)
+    open(shared.get_user_pfp_path(database, username), 'wb').write(requests.get(response["avatar"]).content)
 
-def get_friends(username, source, tab=0):
+def get_friends(username, source):
     match source:
         case "following":
             api_endpoint = "getFollows"
@@ -24,20 +24,19 @@ def get_friends(username, source, tab=0):
 
     friends = copy.deepcopy(shared.users_db_structure)
     friends["users"] = {username: {source: []}}
-    i=0
     for friend in response[api_value]:
         friend_username = friend["handle"]
         try:
             friend_display_name = friend["displayName"]
         except:
-            friend_display_name = friend["handle"]
-        if not args_nopfp and "avatar" in friend:
-            open(save_pfp_location+friend_username+'.png', 'wb').write(requests.get(friend["avatar"]).content)
+            friend_display_name = friend_username
 
-        if friend_username not in friends["users"][username][source]:
-            friends["users"][username][source] += [friend_username]
+        friends["users"][username][source] += [friend_username]
+        if friend_display_name != "":
             friends["display_names"][friend_username] = friend_display_name
-        i+=1
+
+        if args_save_pfp and "avatar" in friend:
+            open(shared.get_user_pfp_path(database, friend_username), 'wb').write(requests.get(friend["avatar"]).content)
     return friends
 
 def parse_api_response(url):
