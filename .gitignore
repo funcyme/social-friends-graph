@@ -2,6 +2,3 @@ __pycache__/
 
 # user data
 user_data/
-
-# browser driver
-geckodriver*

@@ -2,7 +2,7 @@ import argparse
 import os
 import copy
 
-from lib import shared, driver
+from lib import shared
 
 import services.handler
 
@@ -11,11 +11,7 @@ parser.add_argument('users', help='usernames to scan (separated with spaces)')
 parser.add_argument('service', choices=services.handler.AVAILABLE_SERVICES, help='select one of available services')
 parser.add_argument('database', help='database name')
 parser.add_argument('source', choices=services.handler.AVAILABLE_SOURCES, help='select one of available sources')
-parser.add_argument('--session', '-s', help='session name')
 parser.add_argument('--depth', '-d', type=int, default=1, help='crawling depth (friends of friends)')
-parser.add_argument('--pause', '-p', type=int, default=3, help='seconds to pause after loading a page')
-parser.add_argument('--max-scrolls', '-m', type=int, help='maximum number of scrolls down per page')
-parser.add_argument('--manual', '-M', action='store_true', help='in manual mode you have to navigate between pages by yourself')
 parser.add_argument('--force', '-f', action='store_true', help='rescan already scanned users')
 parser.add_argument('--nopfp', action='store_true', help='do not save profile pictures in database')
 parser.add_argument('--blacklist', '-b', help='blacklist usernames to avoid scanning')
@@ -56,6 +52,7 @@ def exec_queue(queue):
     return result
 
 def start_crawling(username, depth):
+    global users_db
     # save data about user
     if username not in users_db["display_names"] or args.force==True:
         print("Getting user display name:", username)
@@ -115,7 +112,7 @@ db_folder = shared.databases_folder+args.database+'/'
 print(f'Using {args.database} as database.')
 
 # create required folders if not exists
-required_folders = [db_folder, db_folder+shared.db_images_folder]
+required_folders = [shared.user_data_folder, shared.databases_folder, db_folder, db_folder+shared.db_images_folder]
 for folder in required_folders:
     if not os.path.isdir(folder):
         os.mkdir(folder)
@@ -139,17 +136,10 @@ if service_file_overwrite:
 
 # prepare scanning
 values = services.handler.set_service(args.service, mode="scan")
-if args.session:
-    print(f'Using {args.session} as session.')
-    driver.open_browser(values["urls"]["DEFAULT_URL"], session=args.session)
 
 # import arguments to driver
-driver.args_pause = args.pause
-driver.args_manual = args.manual
 services.handler.service_driver.database = args.database
-services.handler.service_driver.args_max_scrolls = args.max_scrolls
 services.handler.service_driver.args_save_pfp = not args.nopfp
-services.handler.service_driver.args_pause = args.pause
 
 # import database
 try:
@@ -185,9 +175,5 @@ if not args.autosave:
 print(f'\nUsers scanned: {users_scanned} | {len(users_scanned)} users')
 if users_errors != []:
     print(f'Errors: {users_errors} | {len(users_errors)} users')
-
-# close browser
-if args.session:
-    driver.close_browser()
 
 print("\nFinished.")

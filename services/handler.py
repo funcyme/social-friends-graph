@@ -2,7 +2,7 @@ import json
 
 from lib import shared
 
-AVAILABLE_SERVICES = ['facebook', 'instagram', 'bluesky', 'mastodon', 'tiktok']
+AVAILABLE_SERVICES = ['bluesky', 'mastodon']
 AVAILABLE_SOURCES = ['all', 'following', 'followers', 'friends']
 
 def set_service(service, mode=None):
@@ -11,26 +11,13 @@ def set_service(service, mode=None):
     if mode == "scan":
         global service_driver
         match service:
-            case 'facebook':
-                import services.facebook.driver
-                service_driver = services.facebook.driver
-            case 'instagram':
-                import services.instagram.driver
-                service_driver = services.instagram.driver
             case 'bluesky':
                 import services.bluesky.driver
                 service_driver = services.bluesky.driver
             case 'mastodon':
                 import services.mastodon.driver
                 service_driver = services.mastodon.driver
-            case 'tiktok':
-                import services.tiktok.driver
-                service_driver = services.tiktok.driver
         service_driver.values = service_values
-        try:
-            service_driver.calibrated_driver_values = json.load(open(f"{shared.user_data_folder}/calibrated_driver_values.json", "r", encoding="utf-8"))[service]
-        except:
-            pass
     return service_values
 
 def get_display_name(user):
